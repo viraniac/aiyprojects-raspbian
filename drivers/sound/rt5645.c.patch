@@ -1,6 +1,6 @@
---- ../../linux/sound/soc/codecs/rt5645.c	2019-11-04 21:41:14.119725181 +0000
-+++ rt5645.c	2019-11-04 21:57:17.717363495 +0000
-@@ -3180,6 +3180,10 @@
+--- rt5645.c.orig	2022-12-09 07:44:01.855089585 +0000
++++ rt5645.c	2022-12-09 07:45:35.454648365 +0000
+@@ -3153,6 +3153,10 @@
  	if (jack_insert) {
  		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0e06);
  
@@ -11,7 +11,7 @@
  		/* for jack type detect */
  		snd_soc_dapm_force_enable_pin(dapm, "LDO2");
  		snd_soc_dapm_force_enable_pin(dapm, "Mic Det Power");
-@@ -3199,8 +3203,12 @@
+@@ -3172,8 +3176,12 @@
  		regmap_write(rt5645->regmap, RT5645_JD_CTRL3, 0x00f0);
  		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
  			RT5645_CBJ_MN_JD, RT5645_CBJ_MN_JD);
@@ -26,7 +26,7 @@
  		msleep(100);
  		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
  			RT5645_CBJ_MN_JD, 0);
-@@ -3278,8 +3286,15 @@
+@@ -3251,8 +3259,15 @@
  				RT5645_GP1_PIN_IRQ, RT5645_GP1_PIN_IRQ);
  		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL1,
  				RT5645_DIG_GATE_CTRL, RT5645_DIG_GATE_CTRL);
@@ -43,7 +43,7 @@
  
  	return 0;
  }
-@@ -3767,7 +3782,8 @@
+@@ -3835,7 +3850,8 @@
  	if (device_property_present(dev, "realtek,in2-differential") ||
  	    device_property_present(dev, "realtek,dmic1-data-pin") ||
  	    device_property_present(dev, "realtek,dmic2-data-pin") ||
@@ -53,7 +53,7 @@
  		return true;
  
  	return false;
-@@ -3783,7 +3799,7 @@
+@@ -3851,7 +3867,7 @@
  		"realtek,dmic2-data-pin", &rt5645->pdata.dmic2_data_pin);
  	device_property_read_u32(dev,
  		"realtek,jd-mode", &rt5645->pdata.jd_mode);
