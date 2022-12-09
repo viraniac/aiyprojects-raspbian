@@ -374,14 +374,10 @@ static int aiy_pwm_probe(struct platform_device *pdev)
 
 static int aiy_pwm_remove(struct platform_device *pdev)
 {
-	int err;
 	struct aiy_pwm *aiy_pwm = platform_get_drvdata(pdev);
 
-	err = pwmchip_remove(&aiy_pwm->chip);
-	if (err < 0) {
-		dev_err(&pdev->dev, "Failed to remove pwm chip: %d\n", err);
-		return err;
-	}
+	pwmchip_remove(&aiy_pwm->chip);
+
 	dev_info(&pdev->dev, "Driver removed\n");
 	return 0;
 }

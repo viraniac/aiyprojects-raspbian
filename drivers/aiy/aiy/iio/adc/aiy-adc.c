@@ -179,7 +179,6 @@ static int aiy_adc_probe(struct platform_device *pdev)
 	}
 
 	iio_dev->name = dev_name(dev);
-	iio_dev->driver_module = THIS_MODULE;
 	iio_dev->dev.parent = dev;
 	iio_dev->dev.of_node = dev->of_node;
 	iio_dev->info = &aiy_adc_info;
