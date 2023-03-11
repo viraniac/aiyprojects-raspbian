@@ -256,16 +256,19 @@ static int aiy_pwm_16bit_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	return 0;
 }
 
-static int aiy_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
-			  int duty_ns, int period_ns)
+static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+			 const struct pwm_state *state)
 {
 	int err;
 	const int pin_offset = pwm_map[pwm->hwpwm];
 	struct aiy_io_i2c *aiy = to_aiy(chip);
 	enum aiy_gpio_mode selected_mode = AIY_GPIO_MODE_PWM;
 
-	dev_dbg(chip->dev, "PWM config duty: %d, period: %d.\n", duty_ns,
-		period_ns);
+	if (state->polarity != PWM_POLARITY_NORMAL)
+		return -ENOTSUPP;
+
+	dev_dbg(chip->dev, "PWM config duty: %d, period: %d, state: %d.\n", state->duty_cycle,
+		state->period, state->enabled);
 
 	if (pwm->state.enabled) {
 		/* Disable PWM mode if necessary before reconfiguring. */
@@ -276,12 +279,12 @@ static int aiy_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	/* Use 16bit mode to support higher resolution PWM */
 	/* 16 bit mode is activated when period is 20msec */
-	if (period_ns == AIY_50Hz_PERIOD_NS) {
-		err = aiy_pwm_16bit_config(chip, pwm, duty_ns, period_ns);
+	if (state->period == AIY_50Hz_PERIOD_NS) {
+		err = aiy_pwm_16bit_config(chip, pwm, state->duty_cycle, state->period);
 		selected_mode = AIY_GPIO_MODE_SERVO;
 	} else {
 		/* All other periods use 8 bit mode */
-		err = aiy_pwm_8bit_config(chip, pwm, duty_ns, period_ns);
+		err = aiy_pwm_8bit_config(chip, pwm, state->duty_cycle, state->period);
 	}
 
 	if (err != 0) {
@@ -289,61 +292,32 @@ static int aiy_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		return -EINVAL;
 	}
 
-	if (pwm->state.enabled) {
+	if (state->enabled) {
 		/* Reset correct PWM mode if necessary. */
 		err = regmap_write(aiy->regmap,
 				   AIY_REG_GPIO_BASE_MODE + pin_offset,
 				   selected_mode);
-	}
-
-	return err;
-}
-
-static int aiy_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
-{
-	int err;
-	const int pin_offset = pwm_map[pwm->hwpwm];
-	struct aiy_io_i2c *aiy = to_aiy(chip);
-	enum aiy_gpio_mode selected_mode = AIY_GPIO_MODE_PWM;
-
-	/* Select correct mode if period is 20 msec */
-	if (pwm->state.period == AIY_50Hz_PERIOD_NS) {
-		dev_dbg(chip->dev, "SERVO enable.\n");
-		selected_mode = AIY_GPIO_MODE_SERVO;
 	} else {
-		dev_dbg(chip->dev, "PWM enable.\n");
-	}
+		if (pwm->state.enabled) {
+			dev_dbg(chip->dev, "PWM %d disable.\n", pwm->hwpwm);
 
-	err = regmap_write(aiy->regmap, AIY_REG_GPIO_BASE_MODE + pin_offset,
-			   selected_mode);
-	if (err != 0) {
-		dev_err(chip->dev, "Failed to enable PWM.");
-	}
-	return err;
-}
-
-static void aiy_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
-{
-	int err;
-	const int pin_offset = pwm_map[pwm->hwpwm];
-	struct aiy_io_i2c *aiy = to_aiy(chip);
-
-	dev_dbg(chip->dev, "PWM %d disable.\n", pwm->hwpwm);
-
-	/* Set pin to HIZ when pwm is disabled */
-	err = regmap_write(aiy->regmap, AIY_REG_GPIO_BASE_MODE + pin_offset,
+			/* Set pin to HIZ when pwm is disabled */
+			err = regmap_write(aiy->regmap, AIY_REG_GPIO_BASE_MODE + pin_offset,
 			   AIY_GPIO_MODE_INPUT_HIZ);
-	if (err != 0) {
-		dev_err(chip->dev, "Failed to disable PWM %d.", pwm->hwpwm);
+		}
 	}
+
+	if (err != 0) {
+		dev_err(chip->dev, "Failed to apply PWM state %d.", pwm->hwpwm);
+	}
+
+	return err;
 }
 
 static const struct pwm_ops aiy_pwm_ops = {
 	.request = aiy_pwm_request,
 	.free = aiy_pwm_free,
-	.config = aiy_pwm_config,
-	.enable = aiy_pwm_enable,
-	.disable = aiy_pwm_disable,
+	.apply = aiy_pwm_apply,
 	.owner = THIS_MODULE,
 };
 

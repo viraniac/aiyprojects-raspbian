@@ -148,8 +148,8 @@ static const struct iio_info aiy_adc_info = {
 	}
 
 #define AIY_ADC_CHANNEL_BOTH(_ch, _address, _name)                             \
-	AIY_ADC_CHANNEL(_ch, _address, BIT(IIO_CHAN_INFO_RAW), _name),         \
-	AIY_ADC_CHANNEL(_ch, _address, BIT(IIO_CHAN_INFO_PROCESSED), _name)
+	AIY_ADC_CHANNEL(_ch, _address, BIT(IIO_CHAN_INFO_RAW) | \
+                                       BIT(IIO_CHAN_INFO_PROCESSED), _name)
 
 static const struct iio_chan_spec aiy_adc_channels[] = {
 	/* Both Vision and Voice */

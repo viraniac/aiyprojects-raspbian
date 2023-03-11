@@ -378,7 +378,7 @@ static int aiy_io_i2c_probe(struct i2c_client *i2c,
 	return 0;
 }
 
-static int aiy_io_i2c_remove(struct i2c_client *i2c)
+static void aiy_io_i2c_remove(struct i2c_client *i2c)
 {
 	struct device *dev = &i2c->dev;
 	int err = aiy_io_reset(i2c);
@@ -389,7 +389,6 @@ static int aiy_io_i2c_remove(struct i2c_client *i2c)
 	sysfs_remove_group(&dev->kobj, &aiy_io_attr_group);
 
 	dev_info(dev, "Driver removed\n");
-	return 0;
 }
 
 static const struct of_device_id aiy_io_i2c_of_match[] = {
