@@ -573,14 +573,12 @@ static int ktd202x_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int ktd202x_remove(struct i2c_client *client)
+static void ktd202x_remove(struct i2c_client *client)
 {
 	struct ktd202x_context *ctx = i2c_get_clientdata(client);
 	ktd202x_reset(ctx);
 
 	sysfs_remove_group(&client->dev.kobj, &ktd202x_dev_attr_group);
-
-	return 0;
 }
 
 static const struct of_device_id ktd202x_of_match[] = {
