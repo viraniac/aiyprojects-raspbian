@@ -20,7 +20,6 @@
  */
 
 #include "aiy-vision.h"
-#include <asm/uaccess.h>
 #include <linux/atomic.h>
 #include <linux/cdev.h>
 #include <linux/crc32.h>
@@ -1279,11 +1278,6 @@ static int visionbonnet_probe(struct spi_device *spi) {
 
   dev_notice(&spi->dev, "Initializing\n");
 
-  if (!spi_busnum_to_master(0)) {
-    dev_err(&spi->dev, "No spi master found\n");
-    return -ENODEV;
-  }
-
   bonnet = devm_kzalloc(&spi->dev, sizeof(*bonnet), GFP_KERNEL);
   if (!bonnet) {
     dev_err(&spi->dev, "Out of memory\n");
@@ -1373,7 +1367,7 @@ static int visionbonnet_probe(struct spi_device *spi) {
   // This facilitates large transfers with a single toggling of CS, to
   // make things like booting the bonnet happy.
   spi->mode |= SPI_NO_CS;
-  spi->cs_gpio = -1;
+  spi->cs_gpiod = NULL;
   ret = visionbonnet_set_spi_freq(bonnet, SPI_NORMAL_FREQ);
   if (ret) {
     dev_err(&spi->dev, "spi_setup failed: %d\n", ret);
@@ -1395,7 +1389,7 @@ beach:
   return ret;
 }
 
-static int visionbonnet_remove(struct spi_device *spi) {
+static void visionbonnet_remove(struct spi_device *spi) {
   visionbonnet_t *bonnet = spi->dev.platform_data;
   mutex_lock(&bonnet->lock);
   visionbonnet_cancel_transactions(bonnet);
@@ -1403,7 +1397,6 @@ static int visionbonnet_remove(struct spi_device *spi) {
   drain_workqueue(bonnet->workqueue);
 
   visionbonnet_destroy(bonnet);
-  return 0;
 }
 
 static const struct of_device_id visionbonnet_of_match[] = {
