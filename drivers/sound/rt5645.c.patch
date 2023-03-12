@@ -1,5 +1,5 @@
---- rt5645.c.orig	2022-12-09 07:44:01.855089585 +0000
-+++ rt5645.c	2022-12-09 07:45:35.454648365 +0000
+--- rt5645.c.orig	2023-03-12 21:22:33.105728429 +0530
++++ rt5645.c	2023-03-12 21:24:11.951409594 +0530
 @@ -3153,6 +3153,10 @@
  	if (jack_insert) {
  		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0e06);
@@ -43,7 +43,7 @@
  
  	return 0;
  }
-@@ -3835,7 +3850,8 @@
+@@ -3834,7 +3849,8 @@
  	if (device_property_present(dev, "realtek,in2-differential") ||
  	    device_property_present(dev, "realtek,dmic1-data-pin") ||
  	    device_property_present(dev, "realtek,dmic2-data-pin") ||
@@ -53,7 +53,7 @@
  		return true;
  
  	return false;
-@@ -3851,7 +3867,7 @@
+@@ -3850,7 +3866,7 @@
  		"realtek,dmic2-data-pin", &rt5645->pdata.dmic2_data_pin);
  	device_property_read_u32(dev,
  		"realtek,jd-mode", &rt5645->pdata.jd_mode);

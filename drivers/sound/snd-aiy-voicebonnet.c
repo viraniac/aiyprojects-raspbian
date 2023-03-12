@@ -52,7 +52,7 @@ static int snd_rpi_aiy_voicebonnet_init(struct snd_soc_pcm_runtime *rtd) {
 		return ret;
 	}
 
-	ret = snd_soc_card_jack_new(rtd->card, "Headphone Jack",
+	ret = snd_soc_card_jack_new_pins(rtd->card, "Headphone Jack",
 				    SND_JACK_HEADPHONE,
 				    &headset_jack, &headset_jack_pin, 1);
 	if (ret < 0) {
