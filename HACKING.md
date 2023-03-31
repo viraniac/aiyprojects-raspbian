@@ -284,6 +284,44 @@ wheel (until [this issue][protobuf-issue] is fixed) along with [Google Assistant
   * `rt5645`
   * `snd_aiy_voicebonnet`
 
+## Appendix: Hacking AIY Voice Kit v1 (Voice Hat) for autodetection
+
+By default, Voice Hat needs dtoverlay added in the /boot/config.txt file. This is because the dtb is not flashed in the eeprom of Voice Hat by Google. If autodetection is desired, perform the following steps to flash patched eeprom image to your hat.
+
+### 1. Clone and compile the Raspberry PI EEPROM utils
+
+```bash
+git clone https://github.com/raspberrypi/hats
+cd hats/eepromutils
+make
+```
+
+### 2. Download the patched eeprom
+
+```bash
+wget https://raw.githubusercontent.com/viraniac/aiyprojects-raspbian/aiyprojects/eeprom/voicekit_v1.eep
+```
+
+### 3. Backup existing eeprom file
+
+```bash
+sudo dtoverlay i2c-gpio i2c_gpio_sda=0 i2c_gpio_scl=1 bus=9
+sudo ./eepflash.sh -r -t=24c32 -f=stock.eep
+```
+
+### 4. Disable the write protection for the I2C eeprom chip on Voice Hat
+
+This can be done either by bridging the jumper at JP5 located on top of the hat or by grounding the TP5 testpad located below the hat.
+
+### 5. Flash the patched eeprom file to the Voice Hat
+
+While keeping the write protection disabled, run the following command to flash the patched eep file
+
+```bash
+sudo ./eepflash.sh -w -t=24c32 -f=voicekit_v1.eep
+```
+
+The Voice Hat will now get autodetected after reboot and will have its drivers automatically loaded as they are built into the official Raspbian kernel. Source code for the Voice Hat drivers can be found [here][voice-hat-source].
 
 [changelog]: CHANGES.md
 [raspbian]: https://www.raspberrypi.org/downloads/raspbian/
@@ -297,3 +335,4 @@ wheel (until [this issue][protobuf-issue] is fixed) along with [Google Assistant
 [kernel-gpio]: https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
 [kernel-iio]: https://www.kernel.org/doc/Documentation/driver-api/iio/core.rst
 [aiy-app]: https://play.google.com/store/apps/details?id=com.google.android.apps.aiy
+[voice-hat-source]: https://github.com/raspberrypi/linux/blob/rpi-6.1.y/sound/soc/bcm/rpi-simple-soundcard.c
