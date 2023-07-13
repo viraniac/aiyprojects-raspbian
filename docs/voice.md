@@ -12,14 +12,10 @@ Also see the [Voice Kit assembly guide](https://aiyprojects.withgoogle.com/voice
 
 ## Software
 
-To interact with the Google Assistant, convert speech to text, and perform other
-actions with the Voice Kit, the system image includes Python library with the
+To convert speech to text, and perform other actions with the Voice Kit, the 
+system image includes Python library with the
 following modules:
 
-* [`aiy.assistant`](aiy.assistant.html):
-A collection of modules that simplify interaction with the Google Assistant API.
-* [`aiy.cloudspeech`](aiy.cloudspeech.html):
-APIs to simplify interaction with the Google Cloud Speech-to-Text service.
 * [`aiy.voice.audio`](aiy.voice.audio.html):
 APIs to record and play audio files.
 * [`aiy.voice.tts`](aiy.voice.tts.html):

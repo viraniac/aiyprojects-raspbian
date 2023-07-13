@@ -25,22 +25,8 @@ class Mock(MagicMock):
         return MagicMock()
 
 sys.modules.update((module, Mock()) for module in (
-    'auth_helpers',
     'google',
-    'google.assistant',
-    'google.assistant.embedded',
-    'google.assistant.embedded.v1alpha2',
-    'google.assistant.library',
-    'google.auth',
-    'google.auth.transport',
-    'google.auth.transport.grpc',
-    'google.auth.transport.requests',
-    'google.cloud',
     'google.protobuf',
-    'google_auth_oauthlib',
-    'google_auth_oauthlib.flow',
-    'google.oauth2',
-    'google.oauth2.credentials',
     'gpiozero',
     'gpiozero.exc',
     'gpiozero.threads',
@@ -84,11 +70,7 @@ extensions = [
 ]
 
 # Config for the extlinks extension
-extlinks = {'github': ('https://github.com/google/aiyprojects-raspbian/tree/aiyprojects/%s',
-                       ''),
-            'assistant': ('https://developers.google.com/assistant/sdk/reference/library/python/#%s',
-                          ''),
-            'assistant-rpc': ('https://developers.google.com/assistant/sdk/reference/rpc/#%s',
+extlinks = {'github': ('https://github.com/viraniac/aiyprojects-raspbian/tree/aiyprojects/%s',
                           '')}
 
 # Add any paths that contain templates here, relative to this directory.

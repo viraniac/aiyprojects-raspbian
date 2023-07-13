@@ -32,8 +32,6 @@ assembly guides and makers guides, go to
    :maxdepth: 2
 
    Overview <voice>
-   aiy.assistant
-   aiy.cloudspeech
    aiy.voice.audio
    aiy.voice.tts
 

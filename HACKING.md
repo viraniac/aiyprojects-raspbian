@@ -113,12 +113,6 @@ Install the [example vision models][aiy-models]:
 sudo apt-get install -y aiy-models
 ```
 
-Install the optimized `protobuf` library for better performance:
-
-```bash
-sudo apt-get install -y aiy-python-wheels
-```
-
 Enable camera module:
 ```bash
 echo "start_x=1" | sudo tee -a /boot/config.txt
@@ -190,13 +184,6 @@ Voice HAT:
 sudo sed -i -e "s/^load-module module-suspend-on-idle/#load-module module-suspend-on-idle/" /etc/pulse/default.pa
 ```
 
-If you want to use Google Assistant, install the Raspberry-Pi-compatible
-`google-assistant-library` python library from `aiy-python-wheels` package:
-
-```bash
-sudo apt-get install -y aiy-python-wheels
-```
-
 Reboot:
 
 ```bash
@@ -259,9 +246,6 @@ follow the above steps.
 * `aiy-io-mcu-firmware` contains MCU firmware update service
 * `leds-ktd202x-dkms` contains `leds-ktd202x` LED driver
 * `pwm-soft-dkms` contains `pwm-soft` software PWM driver
-
-* `aiy-python-wheels` contains optimized `protobuf` python
-wheel (until [this issue][protobuf-issue] is fixed) along with [Google Assistant Library][assistant-library] for different Raspberry Pi boards.
 
 ### Vision Bonnet
 
@@ -328,9 +312,6 @@ The Voice Hat will now get autodetected after reboot and will have its drivers a
 [image-flash]: https://www.raspberrypi.org/documentation/installation/installing-images/
 [aiy-models]: https://aiyprojects.withgoogle.com/models/
 [github-releases]: https://github.com/google/aiyprojects-raspbian/releases
-[aiy-voice-setup]: https://aiyprojects.withgoogle.com/voice#google-assistant--get-credentials
-[assistant-library]: https://pypi.org/project/google-assistant-library/
-[protobuf-issue]: https://github.com/bennuttall/piwheels/issues/97
 [kernel-pwm]: https://www.kernel.org/doc/Documentation/pwm.txt
 [kernel-gpio]: https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
 [kernel-iio]: https://www.kernel.org/doc/Documentation/driver-api/iio/core.rst

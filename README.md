@@ -39,12 +39,6 @@ If you're having trouble assembling your kit or running the demos, try the follo
 * [AIY GitHub Issues][aiy-github-issues]
 * support-aiyprojects@google.com
 
-If you've found a problem with the Assistant API (for example, it crashes
-or provides incorrect responses), try the following:
-
-* [Assistant Stack Overflow][assistant-stack-overflow]
-* [Assistant GitHub Issues][assistant-github-issues]
-
 ##
 
 <p align="center">
@@ -65,8 +59,5 @@ or provides incorrect responses), try the following:
 [help-docs]: https://aiyprojects.withgoogle.com/help
 [aiy-forums]: https://www.raspberrypi.org/forums/viewforum.php?f=114
 [aiy-stack-overflow]: https://stackoverflow.com/questions/tagged/google-aiy
-[aiy-github-issues]: https://github.com/google/aiyprojects-raspbian/issues
-[aiy-github-examples]: https://github.com/google/aiyprojects-raspbian/tree/aiyprojects/src/examples
-
-[assistant-stack-overflow]: https://stackoverflow.com/questions/tagged/google-assistant-sdk
-[assistant-github-issues]: https://github.com/googlesamples/assistant-sdk-python/issues
+[aiy-github-issues]: https://github.com/viraniac/aiyprojects-raspbian/issues
+[aiy-github-examples]: https://github.com/viraniac/aiyprojects-raspbian/tree/aiyprojects/src/examples
