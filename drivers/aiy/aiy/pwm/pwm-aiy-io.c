@@ -267,7 +267,7 @@ static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	if (state->polarity != PWM_POLARITY_NORMAL)
 		return -ENOTSUPP;
 
-	dev_dbg(chip->dev, "PWM config duty: %d, period: %d, state: %d.\n", state->duty_cycle,
+	dev_dbg(chip->dev, "PWM config duty: %lld, period: %lld, state: %d.\n", state->duty_cycle,
 		state->period, state->enabled);
 
 	if (pwm->state.enabled) {

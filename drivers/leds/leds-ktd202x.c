@@ -541,8 +541,7 @@ static struct attribute_group ktd202x_dev_attr_group = {
 	.attrs = ktd202x_dev_attrs,
 };
 
-static int ktd202x_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int ktd202x_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct ktd202x_context *ctx = NULL;
@@ -568,7 +567,7 @@ static int ktd202x_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, ctx);
 	ktd202x_init(ctx);
 
-	dev_info(dev, "Driver loaded for a %s.\n", id->name);
+	dev_info(dev, "Driver loaded for a %s.\n", client->name);
 
 	return 0;
 }

@@ -44,6 +44,7 @@ struct pwm_desc {
 };
 
 #define FLAG_SOFTPWM 0
+#define ARCH_NR_GPIOS 512
 
 /* pwm_table
  *
@@ -59,8 +60,8 @@ static struct pwm_desc pwm_table[ARCH_NR_GPIOS];
 static DEFINE_MUTEX(sysfs_lock);
 
 /* forward decls */
-static ssize_t export_store(struct class *class, struct class_attribute *attr, const char *buf, size_t len);
-static ssize_t unexport_store(struct class *class, struct class_attribute *attr, const char *buf, size_t len);
+static ssize_t export_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len);
+static ssize_t unexport_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len);
 int pwm_export(unsigned gpio);
 int pwm_unexport(unsigned gpio);
 
@@ -172,7 +173,7 @@ static int match_export(struct device *dev, const void *data){
 /* Export a GPIO pin to sysfs, and claim it for PWM usage.
  * See the equivalent function in drivers/gpio/gpiolib.c
  */
-static ssize_t export_store(struct class *class, struct class_attribute *attr, const char *buf, size_t len){
+static ssize_t export_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len){
   struct pwm_desc *desc;
   long gpio;
   int  status;
@@ -222,7 +223,7 @@ static CLASS_ATTR_WO(export);
 /* Unexport a PWM GPIO pin from sysfs, and unreclaim it.
  * See the equivalent function in drivers/gpio/gpiolib.c
  */
-static ssize_t unexport_store(struct class *class, struct class_attribute *attr, const char *buf, size_t len) {
+static ssize_t unexport_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len) {
   long gpio;
   int  status;
 
@@ -261,7 +262,6 @@ ATTRIBUTE_GROUPS(soft_pwm_class);
 
 static struct class soft_pwm_class = {
   .name =        "pwm-soft",
-  .owner =       THIS_MODULE,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
   .class_attrs = soft_pwm_class_attrs,
 #else
@@ -355,7 +355,7 @@ enum hrtimer_restart soft_pwm_hrtimer_callback(struct hrtimer *timer) {
 
       if (KTIME_GET_VAL(desc->next_tick) <= KTIME_GET_VAL(now)) {
         desc->value = 1 - desc->value;
-        __gpio_set_value(gpio, desc->value);
+        gpio_set_value(gpio, desc->value);
         desc->counter++;
 
         if (desc->pulses > 0) desc->pulses--;
@@ -420,7 +420,7 @@ static void __exit soft_pwm_exit(void) {
     desc = &pwm_table[gpio];
 
     if (test_bit(FLAG_SOFTPWM,&desc->flags)) {
-      __gpio_set_value(gpio,0);
+      gpio_set_value(gpio,0);
       status = pwm_unexport(gpio);
       if (status==0) gpio_free(gpio);
     }

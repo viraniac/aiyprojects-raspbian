@@ -322,8 +322,7 @@ static const struct regmap_config aiy_io_i2c_regmap_config = {
 	.can_multi_write = true,
 };
 
-static int aiy_io_i2c_probe(struct i2c_client *i2c,
-			    const struct i2c_device_id *id)
+static int aiy_io_i2c_probe(struct i2c_client *i2c)
 {
 	int err;
 	struct device *dev = &i2c->dev;

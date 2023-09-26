@@ -34,6 +34,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -195,7 +196,7 @@ static int mmap_buffer_alloc(mmap_buffer_t *buf, uint32_t len,
     goto done;
   }
 
-  buf->buffer = (char *)vmalloc_user(max(MAX_SPI_TRANSFER_SIZE, len));
+  buf->buffer = (char *)vmalloc_user(max(MAX_SPI_TRANSFER_SIZE, (size_t)len));
   if (!buf->buffer) {
     ret = -ENOMEM;
     goto done;
@@ -368,11 +369,11 @@ static int transaction_alloc(visionbonnet_t *bonnet,
     return -EBUSY;
   }
 
-  cdebug(bonnet, "Allocating %d byte buffer for tid=%u\n",
+  cdebug(bonnet, "Allocating %zu byte buffer for tid=%u\n",
          buffer_len, transaction_id(bonnet, tr));
   tr->buffer = (char *)vmalloc(max(MAX_SPI_TRANSFER_SIZE, buffer_len));
   if (!tr->buffer) {
-    dev_err(dev, "Out of memory, %u b buffer\n", buffer_len);
+    dev_err(dev, "Out of memory, %zu b buffer\n", buffer_len);
     return -ENOMEM;
   }
   tr->buffer_len = buffer_len;
@@ -1238,7 +1239,7 @@ static int visionbonnet_mmap(struct file *filp, struct vm_area_struct *vma) {
     return -EINVAL;
 
   vma->vm_ops = &visionbonnet_vm_ops;
-  vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP | VM_DONTCOPY;
+  vm_flags_set(vma, VM_DONTEXPAND | VM_DONTDUMP | VM_DONTCOPY);
   vma->vm_private_data = buf;
   return 0;
 }
@@ -1251,7 +1252,7 @@ static struct file_operations visionbonnet_fops = {
   .mmap = visionbonnet_mmap,
 };
 
-static int visionbonnet_uevent(struct device *dev,
+static int visionbonnet_uevent(const struct device *dev,
                                struct kobj_uevent_env *env) {
   add_uevent_var(env, "DEVMODE=%#o", 0666);
   return 0;
@@ -1305,7 +1306,7 @@ static int visionbonnet_probe(struct spi_device *spi) {
   bonnet->spicomm_cdev.owner = THIS_MODULE;
   alloc_chrdev_region(&bonnet->spicomm_region, 0, 1, "vision_spicomm");
   cdev_add(&bonnet->spicomm_cdev, MKDEV(MAJOR(bonnet->spicomm_region), 0), 1);
-  bonnet->spicomm_class = class_create(THIS_MODULE, "spicomm");
+  bonnet->spicomm_class = class_create("spicomm");
   bonnet->spicomm_class->dev_uevent = visionbonnet_uevent;
   bonnet->spicomm_device = device_create(
       bonnet->spicomm_class, NULL, MKDEV(MAJOR(bonnet->spicomm_region), 0),

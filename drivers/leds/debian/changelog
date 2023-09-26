@@ -1,3 +1,9 @@
+leds-ktd202x-dkms (1.2-3) stable; urgency=medium
+
+  * Fix compatibility with 6.5.x kernel.
+
+ -- Gunjan Gupta <viraniac@gmail.com>  Tue, 26 Mar 2023 23:39:40 +0530
+
 leds-ktd202x-dkms (1.2-2) stable; urgency=medium
 
   * Fix compatibility with 6.1.x kernel.

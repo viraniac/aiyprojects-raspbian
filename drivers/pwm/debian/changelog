@@ -1,3 +1,9 @@
+pwm-soft-dkms (2.0-1.1) stable; urgency=medium
+
+  * Update driver to support 6.5 kernel.
+
+ -- Gunjan Gupta <viraniac@gmail.com>  Tue, 26 Sep 2023 16:36:24 +0530
+
 pwm-soft-dkms (2.0-1) stable; urgency=medium
 
   * Update driver to support 4.19 kernel.
