@@ -318,7 +318,6 @@ static const struct pwm_ops aiy_pwm_ops = {
 	.request = aiy_pwm_request,
 	.free = aiy_pwm_free,
 	.apply = aiy_pwm_apply,
-	.owner = THIS_MODULE,
 };
 
 static int aiy_pwm_probe(struct platform_device *pdev)
