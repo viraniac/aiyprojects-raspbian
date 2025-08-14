@@ -183,10 +183,9 @@ static int aiy_gpio_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int aiy_gpio_remove(struct platform_device *pdev)
+static void aiy_gpio_remove(struct platform_device *pdev)
 {
 	dev_info(&pdev->dev, "Driver removed\n");
-	return 0;
 }
 
 static const struct of_device_id aiy_gpio_of_match[] = {

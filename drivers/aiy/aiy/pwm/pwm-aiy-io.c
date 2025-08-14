@@ -345,14 +345,13 @@ static int aiy_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int aiy_pwm_remove(struct platform_device *pdev)
+static void aiy_pwm_remove(struct platform_device *pdev)
 {
 	struct aiy_pwm *aiy_pwm = platform_get_drvdata(pdev);
 
 	pwmchip_remove(&aiy_pwm->chip);
 
 	dev_info(pdev->dev.parent, "Driver removed\n");
-	return 0;
 }
 
 static const struct of_device_id aiy_pwm_of_match[] = {

@@ -209,12 +209,11 @@ static int aiy_adc_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int aiy_adc_remove(struct platform_device *pdev)
+static void aiy_adc_remove(struct platform_device *pdev)
 {
 	struct iio_dev *iio_dev = platform_get_drvdata(pdev);
 	iio_device_unregister(iio_dev);
 	dev_info(&pdev->dev, "Driver removed");
-	return 0;
 }
 
 static const struct of_device_id aiy_adc_of_match[] = {
