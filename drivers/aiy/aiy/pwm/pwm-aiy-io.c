@@ -77,7 +77,7 @@ static int aiy_calculate_8bit_settings(struct pwm_chip *chip,
 	do_div(period_cycles, AIY_PWM_NANO_SEC);
 	duty_cycles *= AIY_PWM_8BIT_TIMER_CLK_FREQ;
 	do_div(duty_cycles, AIY_PWM_NANO_SEC);
-	dev_dbg(chip->dev, "Period cycles %llu, duty cycles %llu\n",
+	dev_dbg(chip->dev.parent, "Period cycles %llu, duty cycles %llu\n",
 		period_cycles, duty_cycles);
 
 	/* Calculate the prescaler then the duty cycle and period in cycles */
@@ -86,7 +86,7 @@ static int aiy_calculate_8bit_settings(struct pwm_chip *chip,
 	for (i = 0; i < prescaler_count; i++) {
 		int prescaler = prescalers[i];
 		if (prescaler == 0) {
-			dev_err(chip->dev,
+			dev_err(chip->dev.parent,
 				"Prescaler exceeds the maximum value\n");
 			return -EINVAL;
 		}
@@ -96,14 +96,14 @@ static int aiy_calculate_8bit_settings(struct pwm_chip *chip,
 		if (scaled_period_cycles < AIY_PWM_MAX_CAP) {
 			*prescaler_index = i;
 			if (scaled_period_cycles == 0) {
-				dev_warn(chip->dev,
+				dev_warn(chip->dev.parent,
 					 "Selected PWM Period too small.\n");
 				return -EINVAL;
 			}
 			*period_cyc = (uint16_t)scaled_period_cycles - 1;
 			do_div(scaled_duty_cycles, prescaler);
 			*duty_cyc = (uint16_t)scaled_duty_cycles;
-			dev_dbg(chip->dev,
+			dev_dbg(chip->dev.parent,
 				"Prescaler selected %d, period selected %llu, "
 				"duty cycle "
 				"selected %llu\n",
@@ -131,7 +131,7 @@ static int aiy_calculate_16bit_settings(struct pwm_chip *chip,
 	} else {
 		*duty_cyc = duty_cycles;
 	}
-	dev_dbg(chip->dev, "Duty cycles %d\n", *duty_cyc);
+	dev_dbg(chip->dev.parent, "Duty cycles %d\n", *duty_cyc);
 	return 0;
 }
 
@@ -141,11 +141,11 @@ static int aiy_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 	const int offset = pwm_map[pwm->hwpwm];
 	struct aiy_io_i2c *aiy = to_aiy(chip);
 
-	dev_dbg(chip->dev, "PWM request for pin %d (offset=%d)\n", pwm->hwpwm,
+	dev_dbg(chip->dev.parent, "PWM request for pin %d (offset=%d)\n", pwm->hwpwm,
 		offset);
 	err = aiy_io_request_pin(aiy, offset, AIY_PIN_OPTION_USED_PWM);
 	if (err < 0) {
-		dev_err(chip->dev,
+		dev_err(chip->dev.parent,
 			"PWM request for pin %d (offset=%d) failed: %d\n",
 			pwm->hwpwm, offset, err);
 	}
@@ -157,15 +157,15 @@ static void aiy_pwm_free(struct pwm_chip *chip, struct pwm_device *pwm)
 	const int offset = pwm_map[pwm->hwpwm];
 	struct aiy_io_i2c *aiy = to_aiy(chip);
 
-	dev_dbg(chip->dev, "PWM free pin %d (offset=%d).\n", pwm->hwpwm,
+	dev_dbg(chip->dev.parent, "PWM free pin %d (offset=%d).\n", pwm->hwpwm,
 		offset);
 
 	if (regmap_write(aiy->regmap, AIY_REG_GPIO_BASE_MODE + offset,
 			 AIY_GPIO_MODE_INPUT_HIZ) < 0)
-		dev_err(chip->dev, "Cannot set HIZ mode for pin %d.\n", offset);
+		dev_err(chip->dev.parent, "Cannot set HIZ mode for pin %d.\n", offset);
 
 	if (aiy_io_free_pin(aiy, offset, AIY_PIN_OPTION_USED_PWM) < 0)
-		dev_err(chip->dev, "Cannot free PWM pin %d.\n", offset);
+		dev_err(chip->dev.parent, "Cannot free PWM pin %d.\n", offset);
 }
 
 static int aiy_pwm_write_setting(struct pwm_chip *chip, unsigned int hwpwm,
@@ -181,7 +181,7 @@ static int aiy_pwm_write_setting(struct pwm_chip *chip, unsigned int hwpwm,
 			       base_address + AIY_REG_DUTY_CYCLE_OFFSET,
 			       (void *)&duty, sizeof(duty));
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to set PWM duty cycle.");
+		dev_err(chip->dev.parent, "Failed to set PWM duty cycle.");
 		return -EINVAL;
 	}
 
@@ -189,13 +189,13 @@ static int aiy_pwm_write_setting(struct pwm_chip *chip, unsigned int hwpwm,
 				base_address + AIY_REG_PERIOD_OFFSET,
 				(void *)&period, sizeof(period));
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to set PWM period.");
+		dev_err(chip->dev.parent, "Failed to set PWM period.");
 		return -EINVAL;
 	}
 
 	err = regmap_write(aiy->regmap, prescaler_address, prescaler);
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to set PWM prescaler.");
+		dev_err(chip->dev.parent, "Failed to set PWM prescaler.");
 		return -EINVAL;
 	}
 	return 0;
@@ -209,21 +209,21 @@ static int aiy_pwm_8bit_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	uint16_t period_value = 0;
 	uint16_t duty_value = 0;
 
-	dev_dbg(chip->dev, "PWM config duty: %d, period: %d.\n", duty_ns,
+	dev_dbg(chip->dev.parent, "PWM config duty: %d, period: %d.\n", duty_ns,
 		period_ns);
 
 	err = aiy_calculate_8bit_settings(chip, duty_ns, period_ns,
 					  &period_value, &duty_value,
 					  &prescaler_value);
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to calculate PWM settings.");
+		dev_err(chip->dev.parent, "Failed to calculate PWM settings.");
 		return -EINVAL;
 	}
 
 	err = aiy_pwm_write_setting(chip, pwm->hwpwm, prescaler_value,
 				    duty_value, period_value);
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to write PWM setting.");
+		dev_err(chip->dev.parent, "Failed to write PWM setting.");
 		return -EINVAL;
 	}
 
@@ -238,18 +238,18 @@ static int aiy_pwm_16bit_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	/* In 16-bit mode PWM only supports changing duty cycle */
 	/* 16 bit mode is selected when period is set to 20ms */
 
-	dev_dbg(chip->dev, "Servo config duty: %d, period: %d.\n", duty_ns,
+	dev_dbg(chip->dev.parent, "Servo config duty: %d, period: %d.\n", duty_ns,
 		period_ns);
 
 	err = aiy_calculate_16bit_settings(chip, duty_ns, &duty_value);
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to calculate PWM settings.");
+		dev_err(chip->dev.parent, "Failed to calculate PWM settings.");
 		return -EINVAL;
 	}
 
 	err = aiy_pwm_write_setting(chip, pwm->hwpwm, 0, duty_value, 0);
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to write PWM setting.");
+		dev_err(chip->dev.parent, "Failed to write PWM setting.");
 		return -EINVAL;
 	}
 
@@ -267,7 +267,7 @@ static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	if (state->polarity != PWM_POLARITY_NORMAL)
 		return -ENOTSUPP;
 
-	dev_dbg(chip->dev, "PWM config duty: %lld, period: %lld, state: %d.\n", state->duty_cycle,
+	dev_dbg(chip->dev.parent, "PWM config duty: %lld, period: %lld, state: %d.\n", state->duty_cycle,
 		state->period, state->enabled);
 
 	if (pwm->state.enabled) {
@@ -288,7 +288,7 @@ static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	}
 
 	if (err != 0) {
-		dev_dbg(chip->dev, "Failed to configure PWM\n");
+		dev_dbg(chip->dev.parent, "Failed to configure PWM\n");
 		return -EINVAL;
 	}
 
@@ -299,7 +299,7 @@ static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 				   selected_mode);
 	} else {
 		if (pwm->state.enabled) {
-			dev_dbg(chip->dev, "PWM %d disable.\n", pwm->hwpwm);
+			dev_dbg(chip->dev.parent, "PWM %d disable.\n", pwm->hwpwm);
 
 			/* Set pin to HIZ when pwm is disabled */
 			err = regmap_write(aiy->regmap, AIY_REG_GPIO_BASE_MODE + pin_offset,
@@ -308,7 +308,7 @@ static int aiy_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	}
 
 	if (err != 0) {
-		dev_err(chip->dev, "Failed to apply PWM state %d.", pwm->hwpwm);
+		dev_err(chip->dev.parent, "Failed to apply PWM state %d.", pwm->hwpwm);
 	}
 
 	return err;
@@ -331,17 +331,17 @@ static int aiy_pwm_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	aiy_pwm->aiy = aiy;
-	aiy_pwm->chip.dev = &pdev->dev;
+	aiy_pwm->chip.dev = pdev->dev;
 	aiy_pwm->chip.ops = &aiy_pwm_ops;
 	aiy_pwm->chip.npwm = AIY_PWM_PIN_COUNT;
 	platform_set_drvdata(pdev, aiy_pwm);
 
 	err = pwmchip_add(&aiy_pwm->chip);
 	if (err < 0) {
-		dev_err(&pdev->dev, "Failed to add pwm chip: %d\n", err);
+		dev_err(pdev->dev.parent, "Failed to add pwm chip: %d\n", err);
 		return err;
 	}
-	dev_info(&pdev->dev, "Driver loaded\n");
+	dev_info(pdev->dev.parent, "Driver loaded\n");
 	return 0;
 }
 
@@ -351,7 +351,7 @@ static int aiy_pwm_remove(struct platform_device *pdev)
 
 	pwmchip_remove(&aiy_pwm->chip);
 
-	dev_info(&pdev->dev, "Driver removed\n");
+	dev_info(pdev->dev.parent, "Driver removed\n");
 	return 0;
 }
 
