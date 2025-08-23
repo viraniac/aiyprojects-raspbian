@@ -7,6 +7,6 @@ Standards-Version: 3.8.1
 
 Package: aiy-vision-dkms
 Architecture: all
-Depends: raspberrypi-kernel-headers, aiy-dkms, aiy-vision-firmware, dkms (>= 1.95), ${misc:Depends}
+Depends: linux-headers-rpi-v6 | linux-headers-rpi-v7 | linux-headers-rpi-v7l | linux-headers-rpi-v8, aiy-dkms, aiy-vision-firmware, dkms (>= 1.95), ${misc:Depends}
 Description: AIY Vision DKMS driver.
  Required driver for Vision Bonnet board.

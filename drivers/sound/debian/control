@@ -7,6 +7,6 @@ Standards-Version: 3.8.1
 
 Package: aiy-voicebonnet-soundcard-dkms
 Architecture: all
-Depends: raspberrypi-kernel-headers, dkms (>= 1.95), ${misc:Depends}
+Depends: linux-headers-rpi-v6 | linux-headers-rpi-v7 | linux-headers-rpi-v7l | linux-headers-rpi-v8, dkms (>= 1.95), ${misc:Depends}
 Description: AIY Voice DKMS driver.
  Required driver for Voice Bonnet board.
