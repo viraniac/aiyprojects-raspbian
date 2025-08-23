@@ -36,7 +36,7 @@ static struct snd_soc_jack_pin headset_jack_pin = {
 
 static int snd_rpi_aiy_voicebonnet_init(struct snd_soc_pcm_runtime *rtd) {
 	int ret;
-	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
+	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
 
 	rt5645_sel_asrc_clk_src(codec_dai->component,
 		RT5645_DA_STEREO_FILTER |
@@ -68,7 +68,7 @@ static int snd_rpi_aiy_voicebonnet_hw_params(
 	struct snd_pcm_substream *substream, struct snd_pcm_hw_params *params) {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
+	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
 	unsigned int freq = params_rate(params) * 512;
 
 	/* set codec PLL source to the 24.576MHz (MCLK) platform clock */
