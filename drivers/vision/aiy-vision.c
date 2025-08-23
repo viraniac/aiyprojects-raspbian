@@ -1368,7 +1368,7 @@ static int visionbonnet_probe(struct spi_device *spi) {
   // This facilitates large transfers with a single toggling of CS, to
   // make things like booting the bonnet happy.
   spi->mode |= SPI_NO_CS;
-  spi->cs_gpiod = NULL;
+  spi_set_csgpiod(spi, 0, NULL);
   ret = visionbonnet_set_spi_freq(bonnet, SPI_NORMAL_FREQ);
   if (ret) {
     dev_err(&spi->dev, "spi_setup failed: %d\n", ret);
