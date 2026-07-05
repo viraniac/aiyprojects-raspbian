@@ -1,8 +1,8 @@
---- rt5645.c.orig	2023-03-12 21:22:33.105728429 +0530
-+++ rt5645.c	2023-03-12 21:24:11.951409594 +0530
-@@ -3153,6 +3153,10 @@
+--- rt5645.c.orig
++++ rt5645.c
+@@ -3176,6 +3176,10 @@
  	if (jack_insert) {
- 		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0e06);
+ 		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0206);
  
 +		// Update some bits in MX-91 to prevent accidental 2.17V on the HPO_L
 +		// output which screws up the jack detection code.
@@ -11,7 +11,7 @@
  		/* for jack type detect */
  		snd_soc_dapm_force_enable_pin(dapm, "LDO2");
  		snd_soc_dapm_force_enable_pin(dapm, "Mic Det Power");
-@@ -3172,8 +3176,12 @@
+@@ -3195,8 +3199,12 @@
  		regmap_write(rt5645->regmap, RT5645_JD_CTRL3, 0x00f0);
  		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
  			RT5645_CBJ_MN_JD, RT5645_CBJ_MN_JD);
@@ -21,19 +21,19 @@
 +		// the IN1 port when the jack is connected.
 +		if (rt5645->pdata.jd_mode != 0) {
 +			regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL1,
-+			                   RT5645_CBJ_BST1_EN, RT5645_CBJ_BST1_EN);
++					   RT5645_CBJ_BST1_EN, RT5645_CBJ_BST1_EN);
 +		}
  		msleep(100);
  		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
  			RT5645_CBJ_MN_JD, 0);
-@@ -3251,8 +3259,15 @@
- 				RT5645_GP1_PIN_IRQ, RT5645_GP1_PIN_IRQ);
- 		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL1,
+@@ -3288,8 +3296,15 @@
  				RT5645_DIG_GATE_CTRL, RT5645_DIG_GATE_CTRL);
+ 		regmap_update_bits(rt5645->regmap, RT5645_DEPOP_M1,
+ 				RT5645_HP_CB_MASK, RT5645_HP_CB_PU);
 +		rt5645_irq(0, rt5645);
 +	} else if (rt5645->codec_type == CODEC_TYPE_RT5645) {
 +		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL2,
-+		                   RT5645_CBJ_DET_MODE, RT5645_CBJ_DET_MODE);
++				   RT5645_CBJ_DET_MODE, RT5645_CBJ_DET_MODE);
 +		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL2, 0x1 << 4, 0x1 << 4);
 +		regmap_update_bits(rt5645->regmap, RT5645_GEN_CTRL3, 0x1 << 8, 0x1 << 8);
 +		regmap_update_bits(rt5645->regmap, RT5645_IN1_CTRL1, 0x1 << 5, 0x1 << 5);
@@ -43,7 +43,7 @@
  
  	return 0;
  }
-@@ -3834,7 +3849,8 @@
+@@ -3929,7 +3944,8 @@
  	if (device_property_present(dev, "realtek,in2-differential") ||
  	    device_property_present(dev, "realtek,dmic1-data-pin") ||
  	    device_property_present(dev, "realtek,dmic2-data-pin") ||
@@ -53,12 +53,11 @@
  		return true;
  
  	return false;
-@@ -3850,7 +3866,7 @@
- 		"realtek,dmic2-data-pin", &rt5645->pdata.dmic2_data_pin);
- 	device_property_read_u32(dev,
- 		"realtek,jd-mode", &rt5645->pdata.jd_mode);
--
-+	rt5645->pdata.inv_jd1_1 = device_property_read_bool(dev, "realtek,jd-invert");
- 	return 0;
+@@ -3941,6 +3957,7 @@
+ 	device_property_read_u32(dev, "realtek,dmic1-data-pin", &pdata->dmic1_data_pin);
+ 	device_property_read_u32(dev, "realtek,dmic2-data-pin", &pdata->dmic2_data_pin);
+ 	device_property_read_u32(dev, "realtek,jd-mode", &pdata->jd_mode);
++	pdata->inv_jd1_1 = device_property_read_bool(dev, "realtek,jd-invert");
  }
  
+ static void rt5645_get_pdata(struct device *codec_dev, struct rt5645_platform_data *pdata)

@@ -125,10 +125,10 @@ static int aiy_gpio_set_impl(struct gpio_chip *chip, unsigned int offset,
 	return err;
 }
 
-static void aiy_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
+static int aiy_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 {
 	dev_dbg(chip->parent, "Set GPIO #%d to value %d\n", offset, value);
-	aiy_gpio_set_impl(chip, offset, value);
+	return aiy_gpio_set_impl(chip, offset, value);
 }
 
 static int aiy_gpio_direction_output(struct gpio_chip *chip,
