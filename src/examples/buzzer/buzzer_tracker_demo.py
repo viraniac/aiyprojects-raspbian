@@ -15,6 +15,7 @@
 
 """A demo of the Piezo Buzzer."""
 
+import subprocess
 import sys
 
 from aiy.toneplayer import Note
@@ -26,7 +27,10 @@ def main():
         print("Usage: buzzer_tracker_demo.py <path-to-track-file>")
         return
 
-    loader = TrackLoader(22, sys.argv[1], debug=True)
+    cmd = 'cat /sys/devices/platform/soc/*.gpio/gpio/gpiochip*/base'
+    offset = int(subprocess.run(cmd, shell=True, capture_output=True).stdout.strip())
+
+    loader = TrackLoader(offset + 22, sys.argv[1], debug=True)
     player = loader.load()
     player.play()
 

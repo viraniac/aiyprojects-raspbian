@@ -15,6 +15,7 @@
 
 """A demo of the Piezo Buzzer."""
 
+import subprocess
 import aiy.toneplayer
 
 
@@ -45,7 +46,10 @@ def main():
         'Aq',
     ]
 
-    player = aiy.toneplayer.TonePlayer(22)
+    cmd = 'cat /sys/devices/platform/soc/*.gpio/gpio/gpiochip*/base'
+    offset = int(subprocess.run(cmd, shell=True, capture_output=True).stdout.strip())
+
+    player = aiy.toneplayer.TonePlayer(offset + 22)
     player.play(*tetris_theme)
 
 
