@@ -7,5 +7,5 @@ Standards-Version: 3.8.1
 
 Package: aiy-overlay-voice
 Architecture: all
-Depends: linux-headers-rpi-v6 | linux-headers-rpi-v7 | linux-headers-rpi-v7l | linux-headers-pi-v8, device-tree-compiler (>= 1.4), ${misc:Depends}
+Depends: linux-headers-rpi-v6 | linux-headers-rpi-v7 | linux-headers-rpi-v7l | linux-headers-rpi-v8, device-tree-compiler (>= 1.4), ${misc:Depends}
 Description: Device tree overlay for AIY Voice Bonnet.

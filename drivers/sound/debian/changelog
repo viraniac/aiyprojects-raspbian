@@ -1,3 +1,18 @@
+aiy-voicebonnet-soundcard-dkms (3.0-1.4) UNRELEASED; urgency=medium
+
+  * Non-maintainer upload.
+  * Update rt5645/rl6231 codec drivers to support 6.18 kernel, synced
+    with raspberrypi/linux rpi-6.18.y and reapplied the AIY-specific
+    jack-detection quirks (charge-pump workaround, jd_mode-gated
+    IN1 handling, CODEC_TYPE_RT5645 jack-detect sequence, and
+    realtek,jd-invert devicetree property support) on top
+  * snd-aiy-voicebonnet: use renamed SND_SOC_DAIFMT_CBC_CFC in place
+    of the removed SND_SOC_DAIFMT_CBS_CFS
+  * debian: add dh-dkms to Build-Depends (needed for dh_dkms used
+    in debian/rules)
+
+ -- Gunjan Gupta <viraniac@gmail.com>  Sun, 05 Jul 2026 12:00:00 +0530
+
 aiy-voicebonnet-soundcard-dkms (3.0-1.3) UNRELEASED; urgency=medium
 
   * Non-maintainer upload.
