@@ -23,6 +23,9 @@
 #include <linux/kdev_t.h>
 #include <linux/gpio.h>
 #include <linux/version.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/spinlock.h>
 
 static struct hrtimer hr_timer;
 
@@ -34,6 +37,8 @@ static struct hrtimer hr_timer;
  * shown in sysfs as a debug helper.
 */
 struct pwm_desc {
+  struct list_head list; // node in pwm_list, below
+  unsigned int gpio;     // which GPIO this PWM drives
   unsigned int pulse;    // pulse width, in microseconds
   unsigned int period;   // wave period, in microseconds
   unsigned int pulses;   // number of pwm pulses before stopping; -1 never stops, 0 stops immediately
@@ -44,15 +49,37 @@ struct pwm_desc {
 };
 
 #define FLAG_SOFTPWM 0
-#define ARCH_NR_GPIOS 1024
 
-/* pwm_table
+/* pwm_list / pwm_list_lock
  *
- * The table will hold a description for any GPIO pin available
- * on the system. It's wasteful to preallocate the entire table,
- * but avoiding race conditions is so much easier this way ;-)
-*/
-static struct pwm_desc pwm_table[ARCH_NR_GPIOS];
+ * Rather than preallocating a fixed-size table indexed by GPIO number
+ * (which wastes memory and caps the largest usable GPIO number), each
+ * exported PWM gets its own heap-allocated pwm_desc, linked into this
+ * list. Any GPIO number the system considers valid can be used, not
+ * just ones below some arbitrary compile-time constant.
+ *
+ * pwm_list_lock is a spinlock rather than a mutex because
+ * soft_pwm_hrtimer_callback() below walks the list from hard interrupt
+ * context, where sleeping locks are not allowed. Callers in process
+ * context (export_store/unexport_store) take it with the _irqsave
+ * variants since the timer can fire on the same CPU at any time;
+ * the callback itself, already running with interrupts disabled,
+ * uses the plain (non-irqsave) variant.
+ */
+static LIST_HEAD(pwm_list);
+static DEFINE_SPINLOCK(pwm_list_lock);
+
+/* Find the pwm_desc tracking , if it is currently exported.
+ * Caller must hold pwm_list_lock.
+ */
+static struct pwm_desc *find_pwm_desc_locked(unsigned int gpio) {
+  struct pwm_desc *desc;
+
+  list_for_each_entry(desc, &pwm_list, list) {
+    if (desc->gpio == gpio) return desc;
+  }
+  return NULL;
+}
 
 /* lock protects against pwm_unexport() being called while
  * sysfs files are active.
@@ -62,8 +89,8 @@ static DEFINE_MUTEX(sysfs_lock);
 /* forward decls */
 static ssize_t export_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len);
 static ssize_t unexport_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len);
-int pwm_export(unsigned gpio);
-int pwm_unexport(unsigned gpio);
+int pwm_export(struct pwm_desc *desc);
+int pwm_unexport(struct pwm_desc *desc);
 
 /* Show attribute values for PWMs */
 static ssize_t pwm_show(struct device *dev, struct device_attribute *attr, char *buf) {
@@ -177,39 +204,58 @@ static ssize_t export_store(const struct class *class, const struct class_attrib
   struct pwm_desc *desc;
   long gpio;
   int  status;
+  unsigned long irqflags;
 
   mutex_lock(&sysfs_lock);
 
   status = kstrtol(buf, 0, &gpio);
   if (status < 0) goto done;
 
+  status = -EINVAL;
+  if (!gpio_is_valid(gpio)) goto done;
+
   /* Make sure we don't accidentally do something stupid, like export the same
    * pin twice.
    */
-  desc = &pwm_table[gpio];
+  spin_lock_irqsave(&pwm_list_lock, irqflags);
+  desc = find_pwm_desc_locked(gpio);
+  spin_unlock_irqrestore(&pwm_list_lock, irqflags);
 
-  if (test_bit(FLAG_SOFTPWM, &desc->flags)) {
+  if (desc) {
     printk(KERN_INFO "Attempt to re-export gpio %ld -- returning busy.", gpio);
     status = -EBUSY;
     goto done;
   }
 
+  desc = kzalloc(sizeof(*desc), GFP_KERNEL);
+  if (!desc) {
+    status = -ENOMEM;
+    goto done;
+  }
+  desc->gpio = gpio;
+
   status = gpio_request(gpio, "pwm-soft");
-  if (status < 0) goto done_free_gpio;
+  if (status < 0) goto done_free_desc;
 
   status = gpio_direction_output(gpio,0);
   if (status < 0) goto done_free_gpio;
 
-  status = pwm_export(gpio);
+  status = pwm_export(desc);
   if (status < 0) goto done_free_gpio;
 
-  set_bit(FLAG_SOFTPWM, &pwm_table[gpio].flags);
+  set_bit(FLAG_SOFTPWM, &desc->flags);
+
+  spin_lock_irqsave(&pwm_list_lock, irqflags);
+  list_add(&desc->list, &pwm_list);
+  spin_unlock_irqrestore(&pwm_list_lock, irqflags);
+
+  goto done;
 
 done_free_gpio:
-  if (status != 0) {
-    gpio_free(gpio);
-    pr_debug("%s: status %d\n", __func__, status);
-  }
+  gpio_free(gpio);
+done_free_desc:
+  kfree(desc);
+  pr_debug("%s: status %d\n", __func__, status);
 
 done:
   mutex_unlock(&sysfs_lock);
@@ -224,8 +270,11 @@ static CLASS_ATTR_WO(export);
  * See the equivalent function in drivers/gpio/gpiolib.c
  */
 static ssize_t unexport_store(const struct class *class, const struct class_attribute *attr, const char *buf, size_t len) {
+  struct pwm_desc *desc;
   long gpio;
   int  status;
+  unsigned long irqflags;
+  bool was_softpwm = false;
 
   mutex_lock(&sysfs_lock);
 
@@ -235,9 +284,21 @@ static ssize_t unexport_store(const struct class *class, const struct class_attr
   status = -EINVAL;
   if (!gpio_is_valid(gpio)) goto done;
 
-  if (test_and_clear_bit(FLAG_SOFTPWM, &pwm_table[gpio].flags)) {
-    status = pwm_unexport(gpio);
-    if (status == 0) gpio_free(gpio);
+  spin_lock_irqsave(&pwm_list_lock, irqflags);
+  desc = find_pwm_desc_locked(gpio);
+  if (desc) was_softpwm = test_and_clear_bit(FLAG_SOFTPWM, &desc->flags);
+  spin_unlock_irqrestore(&pwm_list_lock, irqflags);
+
+  if (desc && was_softpwm) {
+    status = pwm_unexport(desc);
+    if (status == 0) {
+      spin_lock_irqsave(&pwm_list_lock, irqflags);
+      list_del(&desc->list);
+      spin_unlock_irqrestore(&pwm_list_lock, irqflags);
+
+      gpio_free(gpio);
+      kfree(desc);
+    }
   }
 
 done:
@@ -271,12 +332,10 @@ static struct class soft_pwm_class = {
 };
 
 /* Setup the sysfs directory for a claimed PWM device */
-int pwm_export(unsigned gpio) {
-  struct pwm_desc *desc;
+int pwm_export(struct pwm_desc *desc) {
   struct device *dev;
   int status = 0;
 
-  desc = &pwm_table[gpio];
   desc->value  = 0;
   desc->pulses = -1;
 
@@ -285,32 +344,30 @@ int pwm_export(unsigned gpio) {
       NULL,
       MKDEV(0, 0),
       desc,
-      "pwm%d",
-      gpio);
+      "pwm%u",
+      desc->gpio);
 
   if (!dev) {
-    printk(KERN_INFO "Failed to register device pwm%d\n", gpio);
+    printk(KERN_INFO "Failed to register device pwm%u\n", desc->gpio);
     status = -ENODEV;
     goto finished;
   }
 
-  printk(KERN_INFO "Registered device pwm%d\n", gpio);
+  printk(KERN_INFO "Registered device pwm%u\n", desc->gpio);
 
 finished:
   if (status != 0) {
-    pr_debug("%s: pwm%d status %d\n", __func__, gpio, status);
+    pr_debug("%s: pwm%u status %d\n", __func__, desc->gpio, status);
   }
 
   return status;
 }
 
 /* Free a claimed PWM device and unregister the sysfs directory */
-int pwm_unexport(unsigned gpio) {
-  struct pwm_desc *desc;
+int pwm_unexport(struct pwm_desc *desc) {
   struct device *dev;
   int status;
 
-  desc = &pwm_table[gpio];
   dev = class_find_device(&soft_pwm_class, NULL, desc, match_export);
 
   if (!dev) {
@@ -320,11 +377,11 @@ int pwm_unexport(unsigned gpio) {
 
   put_device(dev);
   device_unregister(dev);
-  printk(KERN_INFO "Unregistered device pwm%d\n", gpio);
+  printk(KERN_INFO "Unregistered device pwm%u\n", desc->gpio);
   status = 0;
 
 done:
-  if (status) pr_debug("%s: pwm%d status %d\n", __func__, gpio, status);
+  if (status) pr_debug("%s: pwm%u status %d\n", __func__, desc->gpio, status);
 
   return status;
 }
@@ -340,14 +397,13 @@ done:
 #endif
 
 enum hrtimer_restart soft_pwm_hrtimer_callback(struct hrtimer *timer) {
-  unsigned gpio;
   struct pwm_desc *desc;
   ktime_t now = ktime_get();
   ktime_t next_tick = ktime_set(0, 0);
 
-  for (gpio=0; gpio < ARCH_NR_GPIOS; gpio++) {
-    desc = &pwm_table[gpio];
+  spin_lock(&pwm_list_lock);
 
+  list_for_each_entry(desc, &pwm_list, list) {
     if (test_bit(FLAG_SOFTPWM, &desc->flags) &&
         (desc->period > 0) &&
         (desc->pulse <= desc->period) &&
@@ -355,7 +411,7 @@ enum hrtimer_restart soft_pwm_hrtimer_callback(struct hrtimer *timer) {
 
       if (KTIME_GET_VAL(desc->next_tick) <= KTIME_GET_VAL(now)) {
         desc->value = 1 - desc->value;
-        gpio_set_value(gpio, desc->value);
+        gpio_set_value(desc->gpio, desc->value);
         desc->counter++;
 
         if (desc->pulses > 0) desc->pulses--;
@@ -376,6 +432,8 @@ enum hrtimer_restart soft_pwm_hrtimer_callback(struct hrtimer *timer) {
       }
     }
   }
+
+  spin_unlock(&pwm_list_lock);
 
   if (KTIME_GET_VAL(next_tick) > 0) {
     hrtimer_start(&hr_timer, next_tick, HRTIMER_MODE_ABS);
@@ -409,21 +467,26 @@ fail_no_class:
  * signal and give back to GPIO the pin, then deregister our class
  */
 static void __exit soft_pwm_exit(void) {
-  unsigned gpio;
+  struct pwm_desc *desc, *tmp;
   int status;
 
   hrtimer_cancel(&hr_timer);
 
-  for (gpio = 0; gpio < ARCH_NR_GPIOS; gpio++) {
-    struct pwm_desc *desc;
-    desc = &pwm_table[gpio];
+  mutex_lock(&sysfs_lock);
 
-    if (test_bit(FLAG_SOFTPWM,&desc->flags)) {
-      gpio_set_value(gpio,0);
-      status = pwm_unexport(gpio);
-      if (status==0) gpio_free(gpio);
+  list_for_each_entry_safe(desc, tmp, &pwm_list, list) {
+    if (test_bit(FLAG_SOFTPWM, &desc->flags)) {
+      gpio_set_value(desc->gpio, 0);
+      status = pwm_unexport(desc);
+      if (status == 0) {
+        list_del(&desc->list);
+        gpio_free(desc->gpio);
+        kfree(desc);
+      }
     }
   }
+
+  mutex_unlock(&sysfs_lock);
 
   class_unregister(&soft_pwm_class);
 
