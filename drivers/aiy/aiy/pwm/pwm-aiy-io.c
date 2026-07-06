@@ -24,7 +24,6 @@
 #define AIY_PWM_PIN_COUNT 4
 
 struct aiy_pwm {
-	struct pwm_chip chip;
 	struct aiy_io_i2c *aiy;
 };
 
@@ -54,8 +53,8 @@ static const uint8_t prescaler_address_map[] = {
 	AIY_REG_PWM1_PRESCALER,
 };
 
-static inline struct aiy_io_i2c *to_aiy(struct pwm_chip *pwm_chip) {
-	struct aiy_pwm *aiy_pwm = container_of(pwm_chip, struct aiy_pwm, chip);
+static inline struct aiy_io_i2c *to_aiy(struct pwm_chip *chip) {
+	struct aiy_pwm *aiy_pwm = pwmchip_get_drvdata(chip);
 	return aiy_pwm->aiy;
 }
 
@@ -324,34 +323,26 @@ static int aiy_pwm_probe(struct platform_device *pdev)
 {
 	int err;
 	struct aiy_io_i2c *aiy = dev_get_drvdata(pdev->dev.parent);
+	struct pwm_chip *chip;
 	struct aiy_pwm *aiy_pwm;
 
-	aiy_pwm = devm_kzalloc(&pdev->dev, sizeof(*aiy_pwm), GFP_KERNEL);
-	if (!aiy_pwm) {
-		return -ENOMEM;
-	}
-	aiy_pwm->aiy = aiy;
-	aiy_pwm->chip.dev = pdev->dev;
-	aiy_pwm->chip.ops = &aiy_pwm_ops;
-	aiy_pwm->chip.npwm = AIY_PWM_PIN_COUNT;
-	platform_set_drvdata(pdev, aiy_pwm);
+	chip = devm_pwmchip_alloc(&pdev->dev, AIY_PWM_PIN_COUNT, sizeof(*aiy_pwm));
+	if (IS_ERR(chip))
+		return PTR_ERR(chip);
 
-	err = pwmchip_add(&aiy_pwm->chip);
+	aiy_pwm = pwmchip_get_drvdata(chip);
+	aiy_pwm->aiy = aiy;
+	chip->ops = &aiy_pwm_ops;
+
+	platform_set_drvdata(pdev, chip);
+
+	err = devm_pwmchip_add(&pdev->dev, chip);
 	if (err < 0) {
 		dev_err(pdev->dev.parent, "Failed to add pwm chip: %d\n", err);
 		return err;
 	}
 	dev_info(pdev->dev.parent, "Driver loaded\n");
 	return 0;
-}
-
-static void aiy_pwm_remove(struct platform_device *pdev)
-{
-	struct aiy_pwm *aiy_pwm = platform_get_drvdata(pdev);
-
-	pwmchip_remove(&aiy_pwm->chip);
-
-	dev_info(pdev->dev.parent, "Driver removed\n");
 }
 
 static const struct of_device_id aiy_pwm_of_match[] = {
@@ -372,7 +363,6 @@ static struct platform_driver aiy_pwm_driver = {
 		.of_match_table = of_match_ptr(aiy_pwm_of_match),
 	},
 	.probe = aiy_pwm_probe,
-	.remove = aiy_pwm_remove,
 	.id_table = aiy_pwm_id_table,
 };
 module_platform_driver(aiy_pwm_driver);
